@@ -6,7 +6,7 @@
 	url = https://github.com/bradyz/scenario_runner.git
 [submodule "carla_project"]
 	path = carla_project
-	url = https://github.com/bradyz/carla_project.git
+	url = https://github.com/laurayuzheng/carla_project.git
 [submodule "flow"]
 	path = flow
 	url = git@github.com:laurayuzheng/flow.git
