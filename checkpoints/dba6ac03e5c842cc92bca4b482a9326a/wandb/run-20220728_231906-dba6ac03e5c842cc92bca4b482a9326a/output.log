@@ -1,0 +1,41 @@
+data/CARLA_challenge_autopilot/route_09_04_07_23_07_09
+data/CARLA_challenge_autopilot/route_19_04_08_16_31_51
+data/CARLA_challenge_autopilot/route_29_04_09_11_47_17
+data/CARLA_challenge_autopilot/route_39_04_06_09_50_43
+data/CARLA_challenge_autopilot/route_49_04_06_11_43_48
+data/CARLA_challenge_autopilot/route_59_04_06_13_26_15
+data/CARLA_challenge_autopilot/route_69_04_09_00_28_07
+6593 frames.
+[ 537  484 2226  752  527 1156  911]
+Validation sanity check:   0%|                                                                                                                                           | 0/5 [00:00<?, ?it/s]Traceback (most recent call last):
+  File "/home/laura/anaconda3/envs/carla10/lib/python3.7/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/home/laura/anaconda3/envs/carla10/lib/python3.7/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/scratch/2020_CARLA_challenge/carla_project/src/traffic_img_model.py", line 335, in <module>
+    main(parsed)
+  File "/scratch/2020_CARLA_challenge/carla_project/src/traffic_img_model.py", line 301, in main
+    trainer.fit(model)
+  File "/home/laura/anaconda3/envs/carla10/lib/python3.7/site-packages/pytorch_lightning/trainer/trainer.py", line 630, in fit
+    self.run_pretrain_routine(model)
+  File "/home/laura/anaconda3/envs/carla10/lib/python3.7/site-packages/pytorch_lightning/trainer/trainer.py", line 809, in run_pretrain_routine
+    False)
+  File "/home/laura/anaconda3/envs/carla10/lib/python3.7/site-packages/pytorch_lightning/trainer/evaluation_loop.py", line 251, in evaluate
+    for batch_idx, batch in enumerate(dataloader):
+  File "/scratch/2020_CARLA_challenge/carla_project/src/dataset_wrapper.py", line 35, in __iter__
+    yield next(self.data)
+  File "/scratch/2020_CARLA_challenge/carla_project/src/dataset_wrapper.py", line 8, in _repeater
+    for data in loader:
+  File "/home/laura/anaconda3/envs/carla10/lib/python3.7/site-packages/torch/utils/data/dataloader.py", line 530, in __next__
+    data = self._next_data()
+  File "/home/laura/anaconda3/envs/carla10/lib/python3.7/site-packages/torch/utils/data/dataloader.py", line 570, in _next_data
+    data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
+  File "/home/laura/anaconda3/envs/carla10/lib/python3.7/site-packages/torch/utils/data/_utils/fetch.py", line 49, in fetch
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+  File "/home/laura/anaconda3/envs/carla10/lib/python3.7/site-packages/torch/utils/data/_utils/fetch.py", line 49, in <listcomp>
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+  File "/home/laura/anaconda3/envs/carla10/lib/python3.7/site-packages/torch/utils/data/dataset.py", line 416, in __getitem__
+    return self.datasets[dataset_idx][sample_idx]
+  File "/scratch/2020_CARLA_challenge/carla_project/src/dataset.py", line 198, in __getitem__
+    points = torch.FloatTensor(np.array(points))
+TypeError: can't convert np.ndarray of type numpy.object_. The only supported types are: float64, float32, float16, complex64, complex128, int64, int32, int16, int8, uint8, and bool.

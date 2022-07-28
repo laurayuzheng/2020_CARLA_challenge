@@ -1,0 +1,22 @@
+Submodule carla_project contains modified content
+diff --git a/carla_project/src/traffic_img_model.py b/carla_project/src/traffic_img_model.py
+index b054c98..f462294 100644
+--- a/carla_project/src/traffic_img_model.py
++++ b/carla_project/src/traffic_img_model.py
+@@ -286,11 +286,14 @@ def main(hparams):
+         resume_from_checkpoint = None
+ 
+     model = ImageModel(hparams)
+-    logger = WandbLogger(id=hparams.id, save_dir=str(hparams.save_dir), project='stage_2')
++    logger = WandbLogger(id=hparams.id, save_dir=str(hparams.save_dir), project='traffic_model')
+     checkpoint_callback = ModelCheckpoint(hparams.save_dir, save_top_k=1)
+ 
+     trainer = pl.Trainer(
+-            gpus=-1, max_epochs=hparams.max_epochs,
++            # gpus=-1, 
++            gpus=None, 
++            accelerator="cpu",
++            max_epochs=hparams.max_epochs,
+             resume_from_checkpoint=resume_from_checkpoint,
+             logger=logger, checkpoint_callback=checkpoint_callback)
+ 

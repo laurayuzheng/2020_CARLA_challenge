@@ -1,0 +1,58 @@
+data/CARLA_challenge_autopilot/route_09_04_07_23_07_09
+data/CARLA_challenge_autopilot/route_19_04_08_16_31_51
+data/CARLA_challenge_autopilot/route_29_04_09_11_47_17
+data/CARLA_challenge_autopilot/route_39_04_06_09_50_43
+data/CARLA_challenge_autopilot/route_49_04_06_11_43_48
+data/CARLA_challenge_autopilot/route_59_04_06_13_26_15
+data/CARLA_challenge_autopilot/route_69_04_09_00_28_07
+6593 frames.
+[ 537  484 2226  752  527 1156  911]
+Validation sanity check:   0%|                                                                                                                                           | 0/5 [00:00<?, ?it/s]/scratch/2020_CARLA_challenge/carla_project/src/dataset.py:198: UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow. Please consider converting the list to a single numpy.ndarray with numpy.array() before converting to a tensor. (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/torch/csrc/utils/tensor_new.cpp:210.)
+  points = torch.FloatTensor(points)
+/scratch/2020_CARLA_challenge/carla_project/src/dataset.py:198: UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow. Please consider converting the list to a single numpy.ndarray with numpy.array() before converting to a tensor. (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/torch/csrc/utils/tensor_new.cpp:210.)
+  points = torch.FloatTensor(points)
+/scratch/2020_CARLA_challenge/carla_project/src/dataset.py:198: UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow. Please consider converting the list to a single numpy.ndarray with numpy.array() before converting to a tensor. (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/torch/csrc/utils/tensor_new.cpp:210.)
+  points = torch.FloatTensor(points)
+/scratch/2020_CARLA_challenge/carla_project/src/dataset.py:198: UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow. Please consider converting the list to a single numpy.ndarray with numpy.array() before converting to a tensor. (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/torch/csrc/utils/tensor_new.cpp:210.)
+  points = torch.FloatTensor(points)
+Traceback (most recent call last):
+  File "/home/laura/anaconda3/envs/carla10/lib/python3.7/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/home/laura/anaconda3/envs/carla10/lib/python3.7/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/scratch/2020_CARLA_challenge/carla_project/src/traffic_img_model.py", line 331, in <module>
+    main(parsed)
+  File "/scratch/2020_CARLA_challenge/carla_project/src/traffic_img_model.py", line 298, in main
+    trainer.fit(model)
+  File "/home/laura/anaconda3/envs/carla10/lib/python3.7/site-packages/pytorch_lightning/trainer/trainer.py", line 630, in fit
+    self.run_pretrain_routine(model)
+  File "/home/laura/anaconda3/envs/carla10/lib/python3.7/site-packages/pytorch_lightning/trainer/trainer.py", line 809, in run_pretrain_routine
+    False)
+  File "/home/laura/anaconda3/envs/carla10/lib/python3.7/site-packages/pytorch_lightning/trainer/evaluation_loop.py", line 251, in evaluate
+    for batch_idx, batch in enumerate(dataloader):
+  File "/scratch/2020_CARLA_challenge/carla_project/src/dataset_wrapper.py", line 29, in __iter__
+    yield next(self.data)
+  File "/scratch/2020_CARLA_challenge/carla_project/src/dataset_wrapper.py", line 8, in _repeater
+    for data in loader:
+  File "/home/laura/anaconda3/envs/carla10/lib/python3.7/site-packages/torch/utils/data/dataloader.py", line 530, in __next__
+    data = self._next_data()
+  File "/home/laura/anaconda3/envs/carla10/lib/python3.7/site-packages/torch/utils/data/dataloader.py", line 1224, in _next_data
+    return self._process_data(data)
+  File "/home/laura/anaconda3/envs/carla10/lib/python3.7/site-packages/torch/utils/data/dataloader.py", line 1250, in _process_data
+    data.reraise()
+  File "/home/laura/anaconda3/envs/carla10/lib/python3.7/site-packages/torch/_utils.py", line 457, in reraise
+    raise exception
+RuntimeError: Caught RuntimeError in pin memory thread for device 0.
+Original Traceback (most recent call last):
+  File "/home/laura/anaconda3/envs/carla10/lib/python3.7/site-packages/torch/utils/data/_utils/pin_memory.py", line 34, in _pin_memory_loop
+    data = pin_memory(data)
+  File "/home/laura/anaconda3/envs/carla10/lib/python3.7/site-packages/torch/utils/data/_utils/pin_memory.py", line 65, in pin_memory
+    return type(data)([pin_memory(sample) for sample in data])  # type: ignore[call-arg]
+  File "/home/laura/anaconda3/envs/carla10/lib/python3.7/site-packages/torch/utils/data/_utils/pin_memory.py", line 65, in <listcomp>
+    return type(data)([pin_memory(sample) for sample in data])  # type: ignore[call-arg]
+  File "/home/laura/anaconda3/envs/carla10/lib/python3.7/site-packages/torch/utils/data/_utils/pin_memory.py", line 50, in pin_memory
+    return data.pin_memory()
+RuntimeError: CUDA error: out of memory
+CUDA kernel errors might be asynchronously reported at some other API call,so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1.
+

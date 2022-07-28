@@ -1,0 +1,30 @@
+{
+    "root": "/scratch/2020_CARLA_challenge",
+    "program": "/scratch/2020_CARLA_challenge/carla_project/src/traffic_img_model.py",
+    "git": {
+        "remote": "git@github.com:laurayuzheng/2020_CARLA_challenge.git",
+        "commit": "c7e5a2ceadeb041492cbcf0a1427a696298c569e"
+    },
+    "email": "lyzheng@umd.edu",
+    "codePath": "carla_project/src/traffic_img_model.py",
+    "startedAt": "2022-07-28T23:10:01.849141",
+    "host": "laura-precision-5820-tower",
+    "username": "laura",
+    "executable": "/home/laura/anaconda3/envs/carla10/bin/python",
+    "os": "Linux-5.13.0-52-generic-x86_64-with-debian-bullseye-sid",
+    "python": "3.7.13",
+    "gpu": "NVIDIA RTX A5000",
+    "gpu_count": 1,
+    "cpu_count": 20,
+    "args": [
+        "--dataset_dir",
+        "data/CARLA_challenge_autopilot/"
+    ],
+    "state": "failed",
+    "jobType": null,
+    "mode": "run",
+    "name": "3b7e181b75204fb3938cb5fb67f31a39",
+    "project": "traffic_model",
+    "heartbeatAt": "2022-07-28T23:10:10.291392",
+    "exitcode": 1
+}

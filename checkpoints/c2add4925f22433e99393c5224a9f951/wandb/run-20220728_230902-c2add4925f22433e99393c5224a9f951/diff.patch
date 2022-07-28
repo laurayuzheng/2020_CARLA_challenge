@@ -1,0 +1,15 @@
+Submodule carla_project contains modified content
+diff --git a/carla_project/src/traffic_img_model.py b/carla_project/src/traffic_img_model.py
+index b054c98..caeb13d 100644
+--- a/carla_project/src/traffic_img_model.py
++++ b/carla_project/src/traffic_img_model.py
+@@ -290,7 +290,8 @@ def main(hparams):
+     checkpoint_callback = ModelCheckpoint(hparams.save_dir, save_top_k=1)
+ 
+     trainer = pl.Trainer(
+-            gpus=-1, max_epochs=hparams.max_epochs,
++            # gpus=-1, 
++            max_epochs=hparams.max_epochs,
+             resume_from_checkpoint=resume_from_checkpoint,
+             logger=logger, checkpoint_callback=checkpoint_callback)
+ 
