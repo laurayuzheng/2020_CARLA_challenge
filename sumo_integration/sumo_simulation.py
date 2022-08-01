@@ -428,7 +428,7 @@ class SumoSimulation(object):
             # print(results)
                 speed = results[traci.constants.VAR_SPEED]
                 lane_id, lane_pos = results[traci.constants.VAR_LANE_ID], results[traci.constants.VAR_LANEPOSITION]
-                print(f"Veh id: {id} || Lane id: {lane_id} || Lane_pos: {lane_pos}")
+                # print(f"Veh id: {id} || Lane id: {lane_id} || Lane_pos: {lane_pos}")
                 if lane_id in lanes: 
                     lanes[lane_id].append((lane_pos,speed))
                 else: 
