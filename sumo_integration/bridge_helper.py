@@ -34,7 +34,7 @@ class BridgeHelper(object):
     blueprint_library = []
     offset = (0, 0)
 
-    with open('data/vtypes.json') as f:
+    with open('sumo_integration/vtypes.json') as f:
         _VTYPES = json.load(f)['carla_blueprints']
 
     @staticmethod

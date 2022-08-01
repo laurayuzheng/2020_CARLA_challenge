@@ -315,7 +315,7 @@ class SumoSimulation(object):
             sumo_binary = sumolib.checkBinary('sumo')
 
         if host is None or port is None:
-            logging.info('Starting new sumo server...')
+            logging.info(f'Starting new sumo server with cfg file: {cfg_file}')
             if sumo_gui is True:
                 logging.info('Remember to press the play button to start the simulation')
 
@@ -349,6 +349,10 @@ class SumoSimulation(object):
         self.traffic_light_manager = SumoTLManager()
 
         self.lanes_state_dict = {}
+        self.player_id = None 
+
+        # traci.simulationStep()
+        print("Initialized SUMO simulation via TraCI")
 
     @property
     def traffic_light_ids(self):
@@ -405,9 +409,20 @@ class SumoSimulation(object):
     def update_lane_states(self):
         lanes = {}
 
-        for id in self.spawned_actors: 
+        # print("Num of spawned actors: ", len(self.spawned_actors))
+        for id in list(self.spawned_actors): 
             speed = self.get_speed(id) 
             lane_id, lane_pos = self.get_lane_id_and_pos(id)
+            print(f"Veh id: {id} || Lane id: {lane_id} || Lane_pos: {lane_pos}")
+            if lane_id in lanes: 
+                lanes[lane_id].append((lane_pos,speed))
+            else: 
+                lanes[lane_id] = [(lane_pos, speed)]
+        
+        if self.player_id:
+            speed = self.get_speed(self.player_id) 
+            lane_id, lane_pos = self.get_lane_id_and_pos(self.player_id)
+            print(f"Veh id: {self.player_id} || Lane id: {lane_id} || Lane_pos: {lane_pos}")
             if lane_id in lanes: 
                 lanes[lane_id].append((lane_pos,speed))
             else: 
@@ -415,13 +430,15 @@ class SumoSimulation(object):
         
         # Sort by position for a lane
         for lane,state in lanes.items():
-            sorted_tuple_state = sorted(state, key=lambda tup:tup[0])
+            sorted_tuple_state = sorted(state, key=lambda tup:tup[0], reverse=True)
 
             # Un-tuple the sorted states
             sorted_state = [element for tupl in sorted_tuple_state for element in tupl]
             lanes[lane] = sorted_state 
         
         self.lanes_state_dict = lanes
+        print("Lanes state: ", self.lanes_state_dict)
+        print()
     
     def get_state(self, actor_id):
         results = traci.vehicle.getSubscriptionResults(actor_id)
@@ -530,10 +547,12 @@ class SumoSimulation(object):
         """
         traci.simulationStep()
         self.traffic_light_manager.tick()
+        self.update_lane_states()
 
         # Update data structures for the current frame.
         self.spawned_actors = set(traci.simulation.getDepartedIDList())
         self.destroyed_actors = set(traci.simulation.getArrivedIDList())
+
 
     @staticmethod
     def close():

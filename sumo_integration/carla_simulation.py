@@ -173,7 +173,7 @@ class CarlaSimulation(object):
             [vehicle.id for vehicle in self.world.get_actors().filter('vehicle.*')])
         self.spawned_actors = current_actors.difference(self._active_actors)
         self.destroyed_actors = self._active_actors.difference(current_actors)
-        self._active_actors = current_actors
+        self._active_actors = current_actors 
 
     def close(self):
         """
