@@ -350,6 +350,7 @@ class SumoSimulation(object):
 
         self.lanes_state_dict = {}
         self.player_id = None 
+        self.subscribed_ids = []
 
         # traci.simulationStep()
         print("Initialized SUMO simulation via TraCI")
@@ -358,8 +359,7 @@ class SumoSimulation(object):
     def traffic_light_ids(self):
         return self.traffic_light_manager.get_all_landmarks()
 
-    @staticmethod
-    def subscribe(actor_id):
+    def subscribe(self, actor_id):
         """
         Subscribe the given actor to the following variables:
 
@@ -380,13 +380,15 @@ class SumoSimulation(object):
             traci.constants.VAR_SPEED, traci.constants.VAR_SPEED_LAT, traci.constants.VAR_SIGNALS,
             traci.constants.VAR_LANEPOSITION, traci.constants.VAR_LANE_ID # Added to get state
         ])
+        self.subscribed_ids.append(actor_id)
 
-    @staticmethod
-    def unsubscribe(actor_id):
+
+    def unsubscribe(self, actor_id):
         """
         Unsubscribe the given actor from receiving updated information each step.
         """
         traci.vehicle.unsubscribe(actor_id)
+        self.subscribed_ids.remove(actor_id)
 
     def get_net_offset(self):
         """
@@ -410,23 +412,24 @@ class SumoSimulation(object):
         lanes = {}
 
         # print("Num of spawned actors: ", len(self.spawned_actors))
-        for id in list(self.spawned_actors): 
+
+        for id in self.subscribed_ids: 
             speed = self.get_speed(id) 
             lane_id, lane_pos = self.get_lane_id_and_pos(id)
-            print(f"Veh id: {id} || Lane id: {lane_id} || Lane_pos: {lane_pos}")
+            # print(f"Veh id: {id} || Lane id: {lane_id} || Lane_pos: {lane_pos}")
             if lane_id in lanes: 
                 lanes[lane_id].append((lane_pos,speed))
             else: 
                 lanes[lane_id] = [(lane_pos, speed)]
         
-        if self.player_id:
-            speed = self.get_speed(self.player_id) 
-            lane_id, lane_pos = self.get_lane_id_and_pos(self.player_id)
-            print(f"Veh id: {self.player_id} || Lane id: {lane_id} || Lane_pos: {lane_pos}")
-            if lane_id in lanes: 
-                lanes[lane_id].append((lane_pos,speed))
-            else: 
-                lanes[lane_id] = [(lane_pos, speed)]
+        # if self.player_id:
+        #     speed = self.get_speed(self.player_id) 
+        #     lane_id, lane_pos = self.get_lane_id_and_pos(self.player_id)
+        #     print(f"Veh id: {self.player_id} || Lane id: {lane_id} || Lane_pos: {lane_pos}")
+        #     if lane_id in lanes: 
+        #         lanes[lane_id].append((lane_pos,speed))
+        #     else: 
+        #         lanes[lane_id] = [(lane_pos, speed)]
         
         # Sort by position for a lane
         for lane,state in lanes.items():
@@ -437,8 +440,8 @@ class SumoSimulation(object):
             lanes[lane] = sorted_state 
         
         self.lanes_state_dict = lanes
-        print("Lanes state: ", self.lanes_state_dict)
-        print()
+        # print("Lanes state: ", self.lanes_state_dict)
+        # print()
     
     def get_state(self, actor_id):
         results = traci.vehicle.getSubscriptionResults(actor_id)
