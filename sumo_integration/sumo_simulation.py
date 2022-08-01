@@ -408,28 +408,31 @@ class SumoSimulation(object):
         results = traci.vehicle.getSubscriptionResults(actor_id)
         return results[traci.constants.VAR_LANE_ID], results[traci.constants.VAR_LANEPOSITION]
 
+    def has_result(self):
+        nonempty = True 
+
+        for id in self.subscribed_ids:
+            results = traci.vehicle.getSubscriptionResults(id)
+            if not results:
+                nonempty = False 
+        
+        return nonempty
+
     def update_lane_states(self):
         lanes = {}
 
-        # print("Num of spawned actors: ", len(self.spawned_actors))
-
         for id in self.subscribed_ids: 
-            speed = self.get_speed(id) 
-            lane_id, lane_pos = self.get_lane_id_and_pos(id)
-            # print(f"Veh id: {id} || Lane id: {lane_id} || Lane_pos: {lane_pos}")
-            if lane_id in lanes: 
-                lanes[lane_id].append((lane_pos,speed))
-            else: 
-                lanes[lane_id] = [(lane_pos, speed)]
-        
-        # if self.player_id:
-        #     speed = self.get_speed(self.player_id) 
-        #     lane_id, lane_pos = self.get_lane_id_and_pos(self.player_id)
-        #     print(f"Veh id: {self.player_id} || Lane id: {lane_id} || Lane_pos: {lane_pos}")
-        #     if lane_id in lanes: 
-        #         lanes[lane_id].append((lane_pos,speed))
-        #     else: 
-        #         lanes[lane_id] = [(lane_pos, speed)]
+            # print(f"Vehicle id: {id}")
+            results = traci.vehicle.getSubscriptionResults(id)
+            if results:
+            # print(results)
+                speed = results[traci.constants.VAR_SPEED]
+                lane_id, lane_pos = results[traci.constants.VAR_LANE_ID], results[traci.constants.VAR_LANEPOSITION]
+                print(f"Veh id: {id} || Lane id: {lane_id} || Lane_pos: {lane_pos}")
+                if lane_id in lanes: 
+                    lanes[lane_id].append((lane_pos,speed))
+                else: 
+                    lanes[lane_id] = [(lane_pos, speed)]
         
         # Sort by position for a lane
         for lane,state in lanes.items():
@@ -496,12 +499,15 @@ class SumoSimulation(object):
 
         return actor_id
 
-    @staticmethod
-    def destroy_actor(actor_id):
+    # @staticmethod
+    def destroy_actor(self, actor_id):
         """
         Destroys the given actor.
         """
         traci.vehicle.remove(actor_id)
+
+        if actor_id in self.subscribed_ids:
+            self.subscribed_ids.remove(actor_id)
 
     def get_traffic_light_state(self, landmark_id):
         """
@@ -548,13 +554,19 @@ class SumoSimulation(object):
         """
         Tick to sumo simulation.
         """
+        # print("Subscribed ids: ")
+        # print(self.subscribed_ids)
+        # print("Destroyed actors: ")
+        # print(self.destroyed_actors)
+        # print()
+
         traci.simulationStep()
         self.traffic_light_manager.tick()
         self.update_lane_states()
 
         # Update data structures for the current frame.
         self.spawned_actors = set(traci.simulation.getDepartedIDList())
-        self.destroyed_actors = set(traci.simulation.getArrivedIDList())
+        self.destroyed_actors = set(traci.simulation.getArrivedIDList()) 
 
 
     @staticmethod
