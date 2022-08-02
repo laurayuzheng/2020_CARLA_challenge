@@ -350,6 +350,7 @@ class SumoSimulation(object):
 
         self.lanes_state_dict = {}
         self.player_id = None 
+        self.player_ind_in_lane = None
         self.subscribed_ids = []
 
         # traci.simulationStep()
@@ -420,36 +421,43 @@ class SumoSimulation(object):
 
     def update_lane_states(self):
         lanes = {}
+        player_lane = None 
 
         for id in self.subscribed_ids: 
-            # print(f"Vehicle id: {id}")
             results = traci.vehicle.getSubscriptionResults(id)
             if results:
             # print(results)
                 speed = results[traci.constants.VAR_SPEED]
                 lane_id, lane_pos = results[traci.constants.VAR_LANE_ID], results[traci.constants.VAR_LANEPOSITION]
+                
+                if id == self.player_id:
+                    player_lane = lane_id 
+
                 # print(f"Veh id: {id} || Lane id: {lane_id} || Lane_pos: {lane_pos}")
                 if lane_id in lanes: 
-                    lanes[lane_id].append((lane_pos,speed))
+                    lanes[lane_id].append((lane_pos, speed, id))
                 else: 
-                    lanes[lane_id] = [(lane_pos, speed)]
+                    lanes[lane_id] = [(lane_pos, speed, id)]
         
         # Sort by position for a lane
         for lane,state in lanes.items():
             sorted_tuple_state = sorted(state, key=lambda tup:tup[0], reverse=True)
+            
+            if self.player_id and lane == player_lane:
+                self.player_ind_in_lane = [x[2] for x in sorted_tuple_state].index(self.player_id)
 
             # Un-tuple the sorted states
-            sorted_state = [element for tupl in sorted_tuple_state for element in tupl]
+            sorted_state = [element for tupl in sorted_tuple_state for element in tupl[:2]]
             lanes[lane] = sorted_state 
         
         self.lanes_state_dict = lanes
         # print("Lanes state: ", self.lanes_state_dict)
         # print()
     
-    def get_state(self, actor_id):
-        results = traci.vehicle.getSubscriptionResults(actor_id)
+    def get_state(self):
+        results = traci.vehicle.getSubscriptionResults(self.player_id)
         lane_id = results[traci.constants.VAR_LANE_ID]
-        return self.lanes_state_dict[lane_id]
+        return self.lanes_state_dict[lane_id], self.player_ind_in_lane 
 
     @staticmethod
     def get_actor(actor_id):
