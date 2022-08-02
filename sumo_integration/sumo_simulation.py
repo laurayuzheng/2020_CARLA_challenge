@@ -336,7 +336,7 @@ class SumoSimulation(object):
         self.net = _get_sumo_net(cfg_file)
 
         # Creating a random route to be able to spawn carla actors.
-        traci.route.add("carla_route", [traci.edge.getIDList()[0]])
+        # traci.route.add("carla_route", [traci.edge.getIDList()[0]])
 
         # Variable to asign an id to new added actors.
         self._sequential_id = 0
