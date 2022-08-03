@@ -336,7 +336,7 @@ class SumoSimulation(object):
         self.net = _get_sumo_net(cfg_file)
 
         # Creating a random route to be able to spawn carla actors.
-        # traci.route.add("carla_route", [traci.edge.getIDList()[0]])
+        traci.route.add("carla_route", [traci.edge.getIDList()[1]])
 
         # Variable to asign an id to new added actors.
         self._sequential_id = 0
@@ -379,7 +379,7 @@ class SumoSimulation(object):
             traci.constants.VAR_LENGTH, traci.constants.VAR_WIDTH, traci.constants.VAR_HEIGHT,
             traci.constants.VAR_POSITION3D, traci.constants.VAR_ANGLE, traci.constants.VAR_SLOPE,
             traci.constants.VAR_SPEED, traci.constants.VAR_SPEED_LAT, traci.constants.VAR_SIGNALS,
-            traci.constants.VAR_LANEPOSITION, traci.constants.VAR_LANE_ID # Added to get state
+            traci.constants.VAR_LANEPOSITION, traci.constants.VAR_LANE_ID, traci.constants.VAR_ACCELERATION # Added to get state
         ])
         self.subscribed_ids.append(actor_id)
 
@@ -403,6 +403,11 @@ class SumoSimulation(object):
     def get_speed(actor_id):
         results = traci.vehicle.getSubscriptionResults(actor_id)
         return results[traci.constants.VAR_SPEED]
+
+    @staticmethod 
+    def get_accel(actor_id):
+        results = traci.vehicle.getSubscriptionResults(actor_id)
+        return results[traci.constants.VAR_ACCELERATION]
 
     @staticmethod
     def get_lane_id_and_pos(actor_id):
