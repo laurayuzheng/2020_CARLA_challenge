@@ -43,7 +43,7 @@ import carla  # pylint: disable=import-error, wrong-import-position
 # -- load specs definition -------------------------------------------------------------------------
 # ==================================================================================================
 
-with open('../data/vtypes.json') as f:
+with open('../vtypes.json') as f:
     SPECS = json.load(f)
 
     DEFAULT_2_WHEELED_VEHICLE = SPECS['DEFAULT_2_WHEELED_VEHICLE']
@@ -104,7 +104,8 @@ def generate_vtype(vehicle):
         'id': vehicle.type_id,
         'length': str(2.0 * vehicle.bounding_box.extent.x),
         'width': str(2.0 * vehicle.bounding_box.extent.y),
-        'height': str(2.0 * vehicle.bounding_box.extent.z)
+        'height': str(2.0 * vehicle.bounding_box.extent.z),
+        'carFollowModel': "IDM"
     }
 
     specs.update(user_specs)
