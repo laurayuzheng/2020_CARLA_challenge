@@ -38,6 +38,7 @@ class CarlaSimulation(object):
         self._active_actors = set()
         self.spawned_actors = set()
         self.destroyed_actors = set()
+        self.player_id = None 
 
         # Set traffic lights.
         self._tls = {}  # {landmark_id: traffic_ligth_actor}
@@ -124,7 +125,7 @@ class CarlaSimulation(object):
         Destroys the given actor.
         """
         actor = self.world.get_actor(actor_id)
-        if actor is not None:
+        if actor is not None and actor_id != self.player_id:
             return actor.destroy()
         return False
 

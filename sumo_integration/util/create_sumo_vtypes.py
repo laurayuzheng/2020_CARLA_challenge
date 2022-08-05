@@ -102,9 +102,9 @@ def generate_vtype(vehicle):
 
     specs = {
         'id': vehicle.type_id,
-        'length': str(2.0 * vehicle.bounding_box.extent.x),
-        'width': str(2.0 * vehicle.bounding_box.extent.y),
-        'height': str(2.0 * vehicle.bounding_box.extent.z),
+        'length': str(2 * vehicle.bounding_box.extent.x),
+        'width': str(2 * vehicle.bounding_box.extent.y),
+        'height': str(2 * vehicle.bounding_box.extent.z),
         'carFollowModel': "IDM"
     }
 
