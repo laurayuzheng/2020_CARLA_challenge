@@ -379,7 +379,7 @@ def _netconvert_carla_impl(xodr_file, output, tmpdir, guess_tls=False):
             '--output-file', tmp_sumo_net,
             '--geometry.min-radius.fix',
             '--geometry.remove',
-            '--opendrive.curve-resolution', '1',
+            '--opendrive.curve-resolution', '0.25',
             '--opendrive.import-all-lanes',
             '--type-files', os.path.join(basedir, 'data/opendrive_netconvert.typ.xml'),
             # Necessary to link odr and sumo ids.
