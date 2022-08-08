@@ -15,6 +15,7 @@ import collections
 import enum
 import logging
 import os
+from turtle import position
 
 import carla  # pylint: disable=import-error
 import sumolib  # pylint: disable=import-error
@@ -352,6 +353,7 @@ class SumoSimulation(object):
         self.player_id = None 
         self.player_ind_in_lane = None
         self.subscribed_ids = []
+        self.playerlane_fuel_consumption = [] 
 
         # traci.simulationStep()
         print("Initialized SUMO simulation via TraCI")
@@ -379,7 +381,8 @@ class SumoSimulation(object):
             traci.constants.VAR_LENGTH, traci.constants.VAR_WIDTH, traci.constants.VAR_HEIGHT,
             traci.constants.VAR_POSITION3D, traci.constants.VAR_ANGLE, traci.constants.VAR_SLOPE,
             traci.constants.VAR_SPEED, traci.constants.VAR_SPEED_LAT, traci.constants.VAR_SIGNALS,
-            traci.constants.VAR_LANEPOSITION, traci.constants.VAR_LANE_ID, traci.constants.VAR_ACCELERATION # Added to get state
+            traci.constants.VAR_LANEPOSITION, traci.constants.VAR_LANE_ID, traci.constants.VAR_ACCELERATION,
+            traci.constants.VAR_FUELCONSUMPTION # Added to get state and info on objectives
         ])
         self.subscribed_ids.append(actor_id)
 
@@ -398,6 +401,13 @@ class SumoSimulation(object):
         if self.net is None:
             return (0, 0)
         return self.net.getLocationOffset()
+
+    # @staticmethod 
+    # def get_fuel_consumption(actor_id): #  ml/s
+    #     return traci.vehicle.getFuelConsumption(actor_id)
+    
+    def get_playerlane_fuel_consumption(self):
+        return self.playerlane_fuel_consumption
 
     @staticmethod
     def get_speed(actor_id):
@@ -426,8 +436,14 @@ class SumoSimulation(object):
 
     def update_lane_states(self):
         lanes = {}
-        player_lane = None 
 
+        if self.player_id: 
+            player_lane = traci.vehicle.getSubscriptionResults(self.player_id)[traci.constants.VAR_LANE_ID]
+        else:
+            player_lane = None
+
+        self.playerlane_fuel_consumption = [] 
+        
         for id in self.subscribed_ids: 
             results = traci.vehicle.getSubscriptionResults(id)
             if results:
@@ -437,6 +453,10 @@ class SumoSimulation(object):
                 
                 if id == self.player_id:
                     player_lane = lane_id 
+                
+                if lane_id == player_lane: 
+                    fuel_consumption = results[traci.constants.VAR_FUELCONSUMPTION]
+                    self.playerlane_fuel_consumption.append(fuel_consumption)
 
                 # print(f"Veh id: {id} || Lane id: {lane_id} || Lane_pos: {lane_pos}")
                 if lane_id in lanes: 
@@ -446,14 +466,30 @@ class SumoSimulation(object):
         
         # Sort by position for a lane
         for lane,state in lanes.items():
-            sorted_tuple_state = sorted(state, key=lambda tup:tup[0], reverse=True)
-            
+            # print(self.playerlane_fuel_consumption)
+            # print(state)
+            # print(list(zip(self.playerlane_fuel_consumption, state)))
+            if lane == player_lane:
+                sorted_tuple_state = sorted(list(zip(self.playerlane_fuel_consumption, state)), key=lambda tup:tup[1][0], reverse=True)
+                self.playerlane_fuel_consumption, sorted_tuple_state = zip(*sorted_tuple_state)
+                self.playerlane_fuel_consumption = list(self.playerlane_fuel_consumption)
+
+            else: 
+                sorted_tuple_state = sorted(state, key=lambda tup:tup[0], reverse=True)
+
+            # print(self.playerlane_fuel_consumption)
+            # print(sorted_tuple_state)
+
             if self.player_id and lane == player_lane:
                 self.player_ind_in_lane = [x[2] for x in sorted_tuple_state].index(self.player_id)
 
             # Un-tuple the sorted states
             sorted_state = [element for tupl in sorted_tuple_state for element in tupl[:2]]
             lanes[lane] = sorted_state 
+
+            # if lane == player_lane:
+            #     print(sorted_state)
+            #     print(self.playerlane_fuel_consumption)
         
         self.lanes_state_dict = lanes
         # print("Lanes state: ", self.lanes_state_dict)

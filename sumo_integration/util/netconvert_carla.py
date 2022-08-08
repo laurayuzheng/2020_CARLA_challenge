@@ -517,12 +517,14 @@ def netconvert_carla(xodr_file, output, guess_tls=False):
         :returns: path to the generated sumo net.
     """
     try:
-        tmpdir = tempfile.mkdtemp()
+        tmpdir = "maps"
         _netconvert_carla_impl(xodr_file, output, tmpdir, guess_tls)
 
-    finally:
-        if os.path.exists(tmpdir):
-            shutil.rmtree(tmpdir)
+    # finally:
+    except Exception: 
+        pass
+    #     if os.path.exists(tmpdir):
+    #         shutil.rmtree(tmpdir)
 
 
 if __name__ == '__main__':
