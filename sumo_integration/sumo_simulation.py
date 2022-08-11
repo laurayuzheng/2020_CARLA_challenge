@@ -496,6 +496,7 @@ class SumoSimulation(object):
         # print()
     
     def get_state(self):
+        print("Getting state for player: ", self.player_id)
         results = traci.vehicle.getSubscriptionResults(self.player_id)
         lane_id = results[traci.constants.VAR_LANE_ID]
         return self.lanes_state_dict[lane_id], self.player_ind_in_lane 
