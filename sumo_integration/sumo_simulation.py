@@ -324,7 +324,12 @@ class SumoSimulation(object):
                 '--configuration-file', cfg_file,
                 '--step-length', str(step_length),
                 '--lateral-resolution', '0.25',
-                '--collision.check-junctions'
+                '--threads', str(2),
+                # '--collision.check-junctions',
+                '--no-warnings',
+                '--ignore-route-errors',
+                'collision.action none',
+                '--default.carfollowmodel', "IDM",
             ])
 
         else:
@@ -433,6 +438,10 @@ class SumoSimulation(object):
                 nonempty = False 
         
         return nonempty
+    
+    def player_has_result(self):
+        results = traci.vehicle.getSubscriptionResults(self.player_id)
+        return True if results else False 
 
     def update_lane_states(self):
         lanes = {}
@@ -444,44 +453,47 @@ class SumoSimulation(object):
 
         self.playerlane_fuel_consumption = [] 
         
-        for id in self.subscribed_ids: 
-            results = traci.vehicle.getSubscriptionResults(id)
-            if results:
-            # print(results)
-                speed = results[traci.constants.VAR_SPEED]
-                lane_id, lane_pos = results[traci.constants.VAR_LANE_ID], results[traci.constants.VAR_LANEPOSITION]
-                
-                if id == self.player_id:
-                    player_lane = lane_id 
-                
-                if lane_id == player_lane: 
-                    fuel_consumption = results[traci.constants.VAR_FUELCONSUMPTION]
-                    self.playerlane_fuel_consumption.append(fuel_consumption)
+        if player_lane: 
+            for id in self.subscribed_ids: 
+                results = traci.vehicle.getSubscriptionResults(id)
+                if results:
+                # print(results)
+                    speed = results[traci.constants.VAR_SPEED]
+                    lane_id, lane_pos = results[traci.constants.VAR_LANE_ID], results[traci.constants.VAR_LANEPOSITION]
+                    
+                    if id == self.player_id:
+                        player_lane = lane_id 
+                    
+                    if lane_id == player_lane: 
+                        fuel_consumption = results[traci.constants.VAR_FUELCONSUMPTION]
+                        self.playerlane_fuel_consumption.append(fuel_consumption)
 
-                # print(f"Veh id: {id} || Lane id: {lane_id} || Lane_pos: {lane_pos}")
-                if lane_id in lanes: 
-                    lanes[lane_id].append((lane_pos, speed, id))
-                else: 
-                    lanes[lane_id] = [(lane_pos, speed, id)]
-        
-        # Sort by position for a lane
-        for lane,state in lanes.items():
-            # print(self.playerlane_fuel_consumption)
-            # print(state)
-            # print(list(zip(self.playerlane_fuel_consumption, state)))
-            if lane == player_lane:
-                sorted_tuple_state = sorted(list(zip(self.playerlane_fuel_consumption, state)), key=lambda tup:tup[1][0], reverse=True)
-                self.playerlane_fuel_consumption, sorted_tuple_state = zip(*sorted_tuple_state)
-                self.playerlane_fuel_consumption = list(self.playerlane_fuel_consumption)
+                    # print(f"Veh id: {id} || Lane id: {lane_id} || Lane_pos: {lane_pos}")
+                    if lane_id in lanes and lane_id == player_lane: 
+                        lanes[lane_id].append((lane_pos, speed, id))
+                    else: 
+                        lanes[lane_id] = [(lane_pos, speed, id)]
+            
+            # Sort by position for a lane
+            # for lane,state in lanes.items():
+            lane = player_lane 
+            state = lanes[player_lane]
+                # print(self.playerlane_fuel_consumption)
+                # print(state)
+                # print(list(zip(self.playerlane_fuel_consumption, state)))
+            # if lane == player_lane:
+            sorted_tuple_state = sorted(list(zip(self.playerlane_fuel_consumption, state)), key=lambda tup:tup[1][0], reverse=True)
+            self.playerlane_fuel_consumption, sorted_tuple_state = zip(*sorted_tuple_state)
+            self.playerlane_fuel_consumption = list(self.playerlane_fuel_consumption)
 
-            else: 
-                sorted_tuple_state = sorted(state, key=lambda tup:tup[0], reverse=True)
+            # else: 
+            #     sorted_tuple_state = sorted(state, key=lambda tup:tup[0], reverse=True)
 
             # print(self.playerlane_fuel_consumption)
             # print(sorted_tuple_state)
 
-            if self.player_id and lane == player_lane:
-                self.player_ind_in_lane = [x[2] for x in sorted_tuple_state].index(self.player_id)
+            # if self.player_id and lane == player_lane:
+            self.player_ind_in_lane = [x[2] for x in sorted_tuple_state].index(self.player_id)
 
             # Un-tuple the sorted states
             sorted_state = [element for tupl in sorted_tuple_state for element in tupl[:2]]
@@ -496,7 +508,7 @@ class SumoSimulation(object):
         # print()
     
     def get_state(self):
-        print("Getting state for player: ", self.player_id)
+        # print("Getting state for player: ", self.player_id)
         results = traci.vehicle.getSubscriptionResults(self.player_id)
         lane_id = results[traci.constants.VAR_LANE_ID]
         return self.lanes_state_dict[lane_id], self.player_ind_in_lane 
@@ -612,7 +624,8 @@ class SumoSimulation(object):
 
         traci.simulationStep()
         self.traffic_light_manager.tick()
-        self.update_lane_states()
+        if self.player_has_result():
+            self.update_lane_states()
 
         # Update data structures for the current frame.
         self.spawned_actors = set(traci.simulation.getDepartedIDList())
