@@ -328,7 +328,7 @@ class SumoSimulation(object):
                 # '--collision.check-junctions',
                 '--no-warnings',
                 '--ignore-route-errors',
-                'collision.action none',
+                '--collision.action', "none",
                 '--default.carfollowmodel', "IDM",
             ])
 
