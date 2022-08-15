@@ -458,7 +458,7 @@ class SumoSimulation(object):
                 results = traci.vehicle.getSubscriptionResults(id)
                 if results:
                 # print(results)
-                    speed = results[traci.constants.VAR_SPEED]
+                    # speed = results[traci.constants.VAR_SPEED]
                     lane_id, lane_pos = results[traci.constants.VAR_LANE_ID], results[traci.constants.VAR_LANEPOSITION]
                     
                     if id == self.player_id:
@@ -470,9 +470,9 @@ class SumoSimulation(object):
 
                     # print(f"Veh id: {id} || Lane id: {lane_id} || Lane_pos: {lane_pos}")
                     if lane_id in lanes and lane_id == player_lane: 
-                        lanes[lane_id].append((lane_pos, speed, id))
+                        lanes[lane_id].append((lane_pos, id))
                     else: 
-                        lanes[lane_id] = [(lane_pos, speed, id)]
+                        lanes[lane_id] = [(lane_pos, id)]
             
             # Sort by position for a lane
             # for lane,state in lanes.items():
@@ -493,10 +493,10 @@ class SumoSimulation(object):
             # print(sorted_tuple_state)
 
             # if self.player_id and lane == player_lane:
-            self.player_ind_in_lane = [x[2] for x in sorted_tuple_state].index(self.player_id)
+            self.player_ind_in_lane = [x[1] for x in sorted_tuple_state].index(self.player_id)
 
             # Un-tuple the sorted states
-            sorted_state = [element for tupl in sorted_tuple_state for element in tupl[:2]]
+            sorted_state = [element for tupl in sorted_tuple_state for element in tupl]
             lanes[lane] = sorted_state 
 
             # if lane == player_lane:
