@@ -1,0 +1,9 @@
+
+## Train steer map model 
+python -m carla_project.src.traffic_map_model_steer --dataset_dir ./data/traffic_data/tiny --id tiny_test --hack
+
+## Train accel map model 
+python -m carla_project.src.traffic_map_model_accel --dataset_dir ./data/traffic_data/tiny --id tiny_test_accel --hack --steer_checkpoint checkpoints/tiny_test/epoch
+
+## Train image model 
+python -m carla_project.src.traffic_img_model --dataset_dir ./data/traffic_data/tiny --id tiny_test_img --hack --teacher_path checkpoints/tiny_test_accel/epoch=
