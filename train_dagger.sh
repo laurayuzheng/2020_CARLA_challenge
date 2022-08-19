@@ -2,9 +2,12 @@ export CARLA_ROOT=/home/laura/DrivingSimulators/CARLA_0.9.10           # change 
 export PORT=2000                                                    # change to port that CARLA is running on
 export ROUTES=./leaderboard/data/routes_training.xml         # change to desired route
 export TEAM_AGENT=traffic_dagger_agent.py                                   # no need to change
-export TEAM_CONFIG=data/traffic_data/train                          # change path to checkpoint
+export TEAM_CONFIG=data/traffic_data/tiny                          # change path to checkpoint
 export HAS_DISPLAY=0                                                # set to 0 if you don't want a debug window
 export DEBUG_CHALLENGE=0
+export TEACHER_CONFIG=checkpoints/8-17_desired_vel/epoch=17.ckpt 
+
+export EXPERIMENT_ID=8-19_tiny_iterations=30_epochs=1
 
 export PYTHONPATH=$PYTHONPATH:$CARLA_ROOT/PythonAPI/carla
 export PYTHONPATH=$PYTHONPATH:$CARLA_ROOT/PythonAPI/carla/dist/carla-0.9.10-py3.7-linux-x86_64.egg
@@ -26,9 +29,11 @@ python train_dagger.py \
 --routes=${ROUTES} \
 --checkpoint=${CHECKPOINT_ENDPOINT} \
 --carla-port=${PORT} \
---teacher_path=checkpoints/8-17_desired_vel/epoch\=17.ckpt \
---id=dagger_test \
+--teacher_path=${TEACHER_CONFIG} \
+--id=${EXPERIMENT_ID} \
 --dataset_dir=${TEAM_CONFIG} \
---mode=train
+--mode=train \
+--max_epochs=1 \
+--dagger_iterations=30
 
 echo "Done. See $CHECKPOINT_ENDPOINT for detailed results."

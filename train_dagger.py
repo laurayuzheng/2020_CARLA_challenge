@@ -322,7 +322,7 @@ class DAggerRoutine(object):
         self.statistics_manager.save_record(current_stats_record, config.index, checkpoint)
         self.statistics_manager.save_entry_status(entry_status, False, checkpoint)
 
-    def _load_and_run_scenario(self, args, config, iteration:int, save=False):
+    def _load_and_run_scenario(self, args, config, iteration:int, last_checkpoint:str, save=False):
         """
         Load and run the scenario given by config.
 
@@ -345,10 +345,12 @@ class DAggerRoutine(object):
 
             print("Setting up agent: ", agent_class_name)
             self.agent_instance = getattr(self.module_agent, agent_class_name)(args.agent_config)
-            self.agent_instance._init_policy(args.teacher_path)
 
             if save:
                 self.agent_instance._init_savedir(f"iteration{iteration:02d}")
+
+            if last_checkpoint:
+                self.agent_instance._init_policy(last_checkpoint)
 
             config.agent = self.agent_instance
 
@@ -411,7 +413,7 @@ class DAggerRoutine(object):
             self.manager.load_scenario(scenario, self.agent_instance, config.repetition_index)
 
         except Exception as e:
-            # The scenario is wrong -> set the ejecution to crashed and stop
+            # The scenario is wrong -> set the execution to crashed and stop
             print("\n\033[91mThe scenario could not be loaded:")
             print("> {}\033[0m\n".format(e))
             traceback.print_exc()
@@ -446,6 +448,13 @@ class DAggerRoutine(object):
 
             crash_message = "Agent crashed"
 
+        except KeyboardInterrupt as e:
+            print("\n\033[91mUser interrupted execution:")
+            print("> {}\033[0m\n".format(e))
+            traceback.print_exc()
+
+            crash_message = "Cancelled by user"
+            
         except Exception as e:
             print("\n\033[91mError during the simulation:")
             print("> {}\033[0m\n".format(e))
@@ -469,6 +478,13 @@ class DAggerRoutine(object):
             self._cleanup()
             self.synchronization.close()
 
+        except KeyboardInterrupt as e:
+            print("\n\033[91mUser interrupted execution:")
+            print("> {}\033[0m\n".format(e))
+            traceback.print_exc()
+
+            crash_message = "Cancelled by user"
+
         except Exception as e:
             print("\n\033[91mFailed to stop the scenario, the statistics might be empty:")
             print("> {}\033[0m\n".format(e))
@@ -476,7 +492,7 @@ class DAggerRoutine(object):
 
             crash_message = "Simulation crashed"
 
-        if crash_message == "Simulation crashed":
+        if crash_message == "Cancelled by user":
             sys.exit(-1)
 
     def _initialize_route_indexer(self, args):
@@ -488,7 +504,7 @@ class DAggerRoutine(object):
             self.statistics_manager.clear_record(args.checkpoint)
             self.route_indexer.save_state(args.checkpoint)
         
-    def _run_single_route(self, args, iteration, save=False):
+    def _run_single_route(self, args, iteration, last_checkpoint, save=False):
         """ Run a single route scenario. 
         Automatically gets the next route from route indexer.
         """
@@ -499,7 +515,7 @@ class DAggerRoutine(object):
             config = self.route_indexer.next()
 
             # run
-            self._load_and_run_scenario(args, config, iteration, save=save)
+            self._load_and_run_scenario(args, config, iteration, last_checkpoint, save=save)
 
             self.route_indexer.save_state(args.checkpoint)
 
@@ -529,8 +545,8 @@ class DAggerRoutine(object):
         global_stats_record = self.statistics_manager.compute_global_statistics(self.route_indexer.total)
         StatisticsManager.save_global_record(global_stats_record, self.sensor_icons, self.route_indexer.total, args.checkpoint)
 
-    def _get_onpolicy_data(self, args, iteration): 
-        self._run_single_route(args, iteration, save=True)
+    def _get_onpolicy_data(self, args, iteration, last_checkpoint): 
+        self._run_single_route(args, iteration, last_checkpoint, save=True)
 
     def train(self, args):
         
@@ -542,30 +558,46 @@ class DAggerRoutine(object):
         except:
             last_checkpoint = None
 
+        print("Latest checkpoint is: ", last_checkpoint)
+
         self.policy = TrafficImageModel(args, teacher_path=args.teacher_path, dagger=True)
         logger = WandbLogger(id=args.id, save_dir=str(args.save_dir), project='dagger_drive')
         checkpoint_callback = ModelCheckpoint(args.save_dir, 
-                                                # filename='epoch={epoch:02d}',
                                                 save_top_k=1)
 
+        # Train on expert data first
         trainer = pl.Trainer(
                 gpus=-1, max_epochs=args.max_epochs,
                 resume_from_checkpoint=last_checkpoint,
+                reload_dataloaders_every_n_epochs=args.max_epochs,
                 logger=logger, checkpoint_callback=checkpoint_callback)
 
         trainer.fit(self.policy)
-        wandb.save(str(args.save_dir / '*.ckpt'))
-        trainer.fit_loop.max_epochs += args.max_epochs # increase fit loop
 
         for i in range(args.dagger_iterations):
             print("DAgger iteration ", i) 
-            self.train_one_iteration(trainer, args, i)
+            self.train_one_iteration(args, i, trainer, checkpoint_callback, logger)
 
-    def train_one_iteration(self, trainer, args, i):
-        iteration_data_path = self._get_onpolicy_data(args, i) # collects on policy data
-        trainer.fit(self.policy)
         wandb.save(str(args.save_dir / '*.ckpt'))
-        trainer.fit_loop.max_epochs += args.max_epochs # increase fit loop
+
+    def train_one_iteration(self, args, i, trainer, checkpoint_callback, logger):
+        try:
+            last_checkpoint = sorted(args.save_dir.glob('*.ckpt'))[-1]
+        except:
+            last_checkpoint = None
+        
+        trainer.max_epochs += args.max_epochs 
+        self._get_onpolicy_data(args, i, last_checkpoint) # collects on policy data
+        trainer.fit(self.policy)
+
+        # iteration_data_path = self._get_onpolicy_data(args, i) # collects on policy data
+
+        # trainer = pl.Trainer(
+        #         gpus=-1, max_epochs=args.max_epochs,
+        #         resume_from_checkpoint=last_checkpoint,
+        #         logger=logger, checkpoint_callback=checkpoint_callback)
+
+        # trainer.fit(self.policy)
 
     def test(self, args):
         print("TODO")
@@ -577,7 +609,7 @@ def main():
 
     ############# Policy model training params ################
     # train params 
-    parser.add_argument('--max_epochs', type=int, default=5)
+    parser.add_argument('--max_epochs', type=int, default=1)
     parser.add_argument('--save_dir', type=pathlib.Path, default='checkpoints')
     parser.add_argument('--id', type=str, default=uuid.uuid4().hex)
     parser.add_argument('--dagger_iterations', type=int, default=10)
@@ -667,6 +699,9 @@ def main():
                            help='synchronize all vehicle properties (default: False)')
 
     arguments = parser.parse_args()
+    arguments.teacher_path = arguments.teacher_path.resolve()
+    arguments.save_dir = arguments.save_dir.resolve() / arguments.id
+    arguments.save_dir.mkdir(parents=True, exist_ok=True)
 
     statistics_manager = StatisticsManager()
 
