@@ -7,7 +7,7 @@ export HAS_DISPLAY=1                                                # set to 0 i
 export DEBUG_CHALLENGE=0
 export TEACHER_CONFIG=checkpoints/8-17_desired_vel/epoch=17.ckpt 
 
-export EXPERIMENT_ID=8-19_tiny_iterations=30_epochs=1_run_multiple_routes
+export EXPERIMENT_ID=no_lbc_tiny_iterations=30_epochs=1
 
 export PYTHONPATH=$PYTHONPATH:$CARLA_ROOT/PythonAPI/carla
 export PYTHONPATH=$PYTHONPATH:$CARLA_ROOT/PythonAPI/carla/dist/carla-0.9.10-py3.7-linux-x86_64.egg
@@ -29,7 +29,6 @@ python -m train_dagger \
 --routes=${ROUTES} \
 --checkpoint=${CHECKPOINT_ENDPOINT} \
 --carla-port=${PORT} \
---teacher_path=${TEACHER_CONFIG} \
 --id=${EXPERIMENT_ID} \
 --dataset_dir=${TEAM_CONFIG} \
 --mode=train \

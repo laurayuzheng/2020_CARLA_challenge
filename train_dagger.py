@@ -572,7 +572,7 @@ class DAggerRoutine(object):
 
         print("Latest checkpoint is: ", last_checkpoint)
 
-        self.policy = TrafficImageModel(args, teacher_path=args.teacher_path, dagger=True)
+        self.policy = TrafficImageModel(args, dagger=True)
         logger = WandbLogger(id=args.id, save_dir=str(args.save_dir), project='dagger_drive')
         checkpoint_callback = ModelCheckpoint(args.save_dir, 
                                                 save_top_k=1)
@@ -626,7 +626,7 @@ def main():
     parser.add_argument('--id', type=str, default=uuid.uuid4().hex)
     parser.add_argument('--dagger_iterations', type=int, default=10)
 
-    parser.add_argument('--teacher_path', type=pathlib.Path, required=True)
+    # parser.add_argument('--teacher_path', type=pathlib.Path, required=True)
 
     # Model args.
     parser.add_argument('--heatmap_radius', type=int, default=5)
@@ -635,6 +635,7 @@ def main():
     parser.add_argument('--reward_coefficient', type=float, default=0.1)
     parser.add_argument('--temperature', type=float, default=5.0)
     parser.add_argument('--hack', action='store_true', default=False)
+    parser.add_argument('--reward_type', type=str, default="desired_velocity", choices=["avg_velocity", "desired_velocity"])
 
     # Data args.
     parser.add_argument('--dataset_dir', type=pathlib.Path, required=True)
@@ -711,7 +712,7 @@ def main():
                            help='synchronize all vehicle properties (default: False)')
 
     arguments = parser.parse_args()
-    arguments.teacher_path = arguments.teacher_path.resolve()
+    # arguments.teacher_path = arguments.teacher_path.resolve()
     arguments.save_dir = arguments.save_dir.resolve() / arguments.id
     arguments.save_dir.mkdir(parents=True, exist_ok=True)
 
