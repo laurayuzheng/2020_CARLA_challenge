@@ -3,11 +3,11 @@ export PORT=2000                                                    # change to 
 export ROUTES=./leaderboard/data/routes_training.xml         # change to desired route
 export TEAM_AGENT=traffic_dagger_agent.py                                   # no need to change
 export TEAM_CONFIG=data/traffic_data/tiny                          # change path to checkpoint
-export HAS_DISPLAY=0                                                # set to 0 if you don't want a debug window
+export HAS_DISPLAY=1                                                # set to 0 if you don't want a debug window
 export DEBUG_CHALLENGE=0
 export TEACHER_CONFIG=checkpoints/8-17_desired_vel/epoch=17.ckpt 
 
-export EXPERIMENT_ID=8-19_tiny_iterations=30_epochs=1
+export EXPERIMENT_ID=8-19_tiny_iterations=30_epochs=1_run_multiple_routes
 
 export PYTHONPATH=$PYTHONPATH:$CARLA_ROOT/PythonAPI/carla
 export PYTHONPATH=$PYTHONPATH:$CARLA_ROOT/PythonAPI/carla/dist/carla-0.9.10-py3.7-linux-x86_64.egg
@@ -21,7 +21,7 @@ else
     CHECKPOINT_ENDPOINT="$(dirname $TEAM_CONFIG)/$(basename $ROUTES .xml).txt"
 fi
 
-python train_dagger.py \
+python -m train_dagger \
 --track=SENSORS \
 --scenarios=leaderboard/data/all_towns_traffic_scenarios_public.json  \
 --agent=${TEAM_AGENT} \

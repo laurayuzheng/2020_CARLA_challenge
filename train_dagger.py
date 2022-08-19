@@ -438,7 +438,7 @@ class DAggerRoutine(object):
             for i in range(5):
                 self.synchronization.tick()
                  
-            self.manager.run_scenario_cosim(self.synchronization)
+            self.manager.run_scenario_cosim(self.synchronization, max_ticks=8000)
 
         except AgentError as e:
             # The agent has failed -> stop the route
@@ -454,7 +454,7 @@ class DAggerRoutine(object):
             traceback.print_exc()
 
             crash_message = "Cancelled by user"
-            
+
         except Exception as e:
             print("\n\033[91mError during the simulation:")
             print("> {}\033[0m\n".format(e))
@@ -493,6 +493,7 @@ class DAggerRoutine(object):
             crash_message = "Simulation crashed"
 
         if crash_message == "Cancelled by user":
+            self._cleanup()
             sys.exit(-1)
 
     def _initialize_route_indexer(self, args):
@@ -518,6 +519,16 @@ class DAggerRoutine(object):
             self._load_and_run_scenario(args, config, iteration, last_checkpoint, save=save)
 
             self.route_indexer.save_state(args.checkpoint)
+        else:
+            self._initialize_route_indexer(self, args) # reinitialize route indexer
+            if self.route_indexer.peek():
+                # setup
+                config = self.route_indexer.next()
+
+                # run
+                self._load_and_run_scenario(args, config, iteration, last_checkpoint, save=save)
+
+                self.route_indexer.save_state(args.checkpoint)
 
         # save global statistics
         print("\033[1m> Registering the global statistics\033[0m")
@@ -546,7 +557,8 @@ class DAggerRoutine(object):
         StatisticsManager.save_global_record(global_stats_record, self.sensor_icons, self.route_indexer.total, args.checkpoint)
 
     def _get_onpolicy_data(self, args, iteration, last_checkpoint): 
-        self._run_single_route(args, iteration, last_checkpoint, save=True)
+        for i in range(5):
+            self._run_single_route(args, iteration, last_checkpoint, save=True)
 
     def train(self, args):
         
