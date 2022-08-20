@@ -22,6 +22,7 @@ import pytorch_lightning as pl
 import pathlib
 import wandb
 import uuid
+import gc
 
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -557,7 +558,7 @@ class DAggerRoutine(object):
         StatisticsManager.save_global_record(global_stats_record, self.sensor_icons, self.route_indexer.total, args.checkpoint)
 
     def _get_onpolicy_data(self, args, iteration, last_checkpoint): 
-        for i in range(5):
+        for i in range(3):
             self._run_single_route(args, iteration, last_checkpoint, save=True)
 
     def train(self, args):
@@ -572,7 +573,7 @@ class DAggerRoutine(object):
 
         print("Latest checkpoint is: ", last_checkpoint)
 
-        self.policy = TrafficImageModel(args, dagger=True)
+        self.policy = TrafficImageModel(args, teacher_path=args.teacher_path, dagger=True)
         logger = WandbLogger(id=args.id, save_dir=str(args.save_dir), project='dagger_drive')
         checkpoint_callback = ModelCheckpoint(args.save_dir, 
                                                 save_top_k=1)
@@ -585,31 +586,31 @@ class DAggerRoutine(object):
                 logger=logger, checkpoint_callback=checkpoint_callback)
 
         trainer.fit(self.policy)
+        gc.collect()
+        torch.cuda.empty_cache()
 
-        for i in range(args.dagger_iterations):
+        for i in range(args.dagger_iterations): 
             print("DAgger iteration ", i) 
-            self.train_one_iteration(args, i, trainer, checkpoint_callback, logger)
+            self.train_one_iteration(args, i, trainer)
 
         wandb.save(str(args.save_dir / '*.ckpt'))
 
-    def train_one_iteration(self, args, i, trainer, checkpoint_callback, logger):
+    def train_one_iteration(self, args, i, trainer):
         try:
             last_checkpoint = sorted(args.save_dir.glob('*.ckpt'))[-1]
         except:
             last_checkpoint = None
+
+        try:
+            self._get_onpolicy_data(args, i, last_checkpoint) # collects on policy data
+        except:
+            pass
         
         trainer.max_epochs += args.max_epochs 
-        self._get_onpolicy_data(args, i, last_checkpoint) # collects on policy data
+        self.synchronization.reset()
         trainer.fit(self.policy)
-
-        # iteration_data_path = self._get_onpolicy_data(args, i) # collects on policy data
-
-        # trainer = pl.Trainer(
-        #         gpus=-1, max_epochs=args.max_epochs,
-        #         resume_from_checkpoint=last_checkpoint,
-        #         logger=logger, checkpoint_callback=checkpoint_callback)
-
-        # trainer.fit(self.policy)
+        gc.collect()
+        torch.cuda.empty_cache()
 
     def test(self, args):
         print("TODO")
@@ -626,7 +627,7 @@ def main():
     parser.add_argument('--id', type=str, default=uuid.uuid4().hex)
     parser.add_argument('--dagger_iterations', type=int, default=10)
 
-    # parser.add_argument('--teacher_path', type=pathlib.Path, required=True)
+    parser.add_argument('--teacher_path', type=pathlib.Path, required=True)
 
     # Model args.
     parser.add_argument('--heatmap_radius', type=int, default=5)
@@ -639,7 +640,7 @@ def main():
 
     # Data args.
     parser.add_argument('--dataset_dir', type=pathlib.Path, required=True)
-    parser.add_argument('--batch_size', type=int, default=16)
+    parser.add_argument('--batch_size', type=int, default=8)
 
     # Optimizer args.
     parser.add_argument('--lr', type=float, default=1e-4)
@@ -712,7 +713,7 @@ def main():
                            help='synchronize all vehicle properties (default: False)')
 
     arguments = parser.parse_args()
-    # arguments.teacher_path = arguments.teacher_path.resolve()
+    arguments.teacher_path = arguments.teacher_path.resolve()
     arguments.save_dir = arguments.save_dir.resolve() / arguments.id
     arguments.save_dir.mkdir(parents=True, exist_ok=True)
 
