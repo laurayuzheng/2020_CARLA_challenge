@@ -144,7 +144,8 @@ class DAggerRoutine(object):
         ## DAgger related attributes
         self.policy = None # Keep a reference to policy model 
         self.route_indexer = None
-
+        self.sumo_active = False
+        self.synchronization = None
 
 
     def _signal_handler(self, signum, frame):
@@ -207,6 +208,223 @@ class DAggerRoutine(object):
         """
         Spawn or update the ego vehicles
         """
+
+        if not wait_for_ego_vehicles:
+            for vehicle in ego_vehicles:
+                self.ego_vehicles.append(CarlaDataProvider.request_new_actor(vehicle.model,
+                                                                             vehicle.transform,
+                                                                             vehicle.rolename,
+                                                                             color=vehicle.color,
+                                                                             vehicle_category=vehicle.category))
+
+        else:
+            ego_vehicle_missing = True
+            while ego_vehicle_missing:
+                self.ego_vehicles = []
+                ego_vehicle_missing = False
+                for ego_vehicle in ego_vehicles:
+                    ego_vehicle_found = False
+                    carla_vehicles = CarlaDataProvider.get_world().get_actors().filter('vehicle.*')
+                    for carla_vehicle in carla_vehicles:
+                        if carla_vehicle.attributes['role_name'] == ego_vehicle.rolename:
+                            ego_vehicle_found = True
+                            self.ego_vehicles.append(carla_vehicle)
+                            break
+                    if not ego_vehicle_found:
+                        ego_vehicle_missing = True
+                        break
+
+            for i, _ in enumerate(self.ego_vehicles):
+                self.ego_vehicles[i].set_transform(ego_vehicles[i].transform)
+
+        # sync state
+        CarlaDataProvider.get_world().tick()
+
+    def _load_and_wait_for_world(self, args, town, ego_vehicles=None):
+        """
+        Load a new CARLA world and provide data to CarlaDataProvider
+        """
+
+        self.world = self.client.load_world(town)
+        settings = self.world.get_settings()
+        settings.fixed_delta_seconds = 1.0 / self.frame_rate
+        settings.synchronous_mode = True
+        self.world.apply_settings(settings)
+
+        self.world.reset_all_traffic_lights()
+
+        CarlaDataProvider.set_client(self.client)
+        CarlaDataProvider.set_world(self.world)
+        CarlaDataProvider.set_traffic_manager_port(int(args.trafficManagerPort))
+
+        self.traffic_manager.set_synchronous_mode(True)
+        self.traffic_manager.set_random_device_seed(int(args.trafficManagerSeed))
+
+        # Wait for the world to be ready
+        if CarlaDataProvider.is_sync_mode():
+            self.world.tick()
+        else:
+            self.world.wait_for_tick()
+
+        if CarlaDataProvider.get_map().name != town:
+            raise Exception("The CARLA server uses the wrong map!"
+                            "This scenario requires to use map {}".format(town))
+
+    def _load_and_run_scenario(self, args, config):
+        """
+        Load and run the scenario given by config.
+
+        Depending on what code fails, the simulation will either stop the route and
+        continue from the next one, or report a crash and stop.
+        """
+        crash_message = ""
+        entry_status = "Started"
+
+        print("\n\033[1m========= Preparing {} (repetition {}) =========".format(config.name, config.repetition_index))
+        print("> Setting up the agent\033[0m")
+
+        # Prepare the statistics of the route
+        self.statistics_manager.set_route(config.name, config.index)
+
+        # Set up the user's agent, and the timer to avoid freezing the simulation
+        try:
+            self._agent_watchdog.start()
+            agent_class_name = getattr(self.module_agent, 'get_entry_point')()
+            self.agent_instance = getattr(self.module_agent, agent_class_name)(args.agent_config)
+            config.agent = self.agent_instance
+
+            # Check and store the sensors
+            if not self.sensors:
+                self.sensors = self.agent_instance.sensors()
+                track = self.agent_instance.track
+
+                AgentWrapper.validate_sensor_configuration(self.sensors, track, args.track)
+
+                self.sensor_icons = [sensors_to_icons[sensor['type']] for sensor in self.sensors]
+                self.statistics_manager.save_sensors(self.sensor_icons, args.checkpoint)
+
+            self._agent_watchdog.stop()
+
+        except SensorConfigurationInvalid as e:
+            # The sensors are invalid -> set the ejecution to rejected and stop
+            print("\n\033[91mThe sensor's configuration used is invalid:")
+            print("> {}\033[0m\n".format(e))
+            traceback.print_exc()
+
+            crash_message = "Agent's sensors were invalid"
+            entry_status = "Rejected"
+
+            self._register_statistics(config, args.checkpoint, entry_status, crash_message)
+            self._cleanup()
+            sys.exit(-1)
+
+        except Exception as e:
+            # The agent setup has failed -> start the next route
+            print("\n\033[91mCould not set up the required agent:")
+            print("> {}\033[0m\n".format(e))
+            traceback.print_exc()
+
+            crash_message = "Agent couldn't be set up"
+
+            self._register_statistics(config, args.checkpoint, entry_status, crash_message)
+            self._cleanup()
+            return
+
+        print("\033[1m> Loading the world\033[0m")
+
+        # Load the world and the scenario
+        try:
+            self._load_and_wait_for_world(args, config.town, config.ego_vehicles)
+            self._prepare_ego_vehicles(config.ego_vehicles, False)
+            scenario = RouteScenario(world=self.world, config=config, debug_mode=args.debug)
+            self.statistics_manager.set_scenario(scenario.scenario)
+
+            # Night mode
+            if config.weather.sun_altitude_angle < 0.0:
+                for vehicle in scenario.ego_vehicles:
+                    vehicle.set_light_state(carla.VehicleLightState(self._vehicle_lights))
+
+            # Load scenario and run it
+            if args.record:
+                self.client.start_recorder("{}/{}_rep{}.log".format(args.record, config.name, config.repetition_index))
+            self.manager.load_scenario(scenario, self.agent_instance, config.repetition_index)
+
+        except Exception as e:
+            # The scenario is wrong -> set the ejecution to crashed and stop
+            print("\n\033[91mThe scenario could not be loaded:")
+            print("> {}\033[0m\n".format(e))
+            traceback.print_exc()
+
+            crash_message = "Simulation crashed"
+            entry_status = "Crashed"
+
+            self._register_statistics(config, args.checkpoint, entry_status, crash_message)
+
+            if args.record:
+                self.client.stop_recorder()
+
+            self._cleanup()
+            sys.exit(-1)
+
+        print("\033[1m> Running the route\033[0m")
+
+        # Run the scenario
+        try:
+            self.manager.run_scenario()
+
+        except AgentError as e:
+            # The agent has failed -> stop the route
+            print("\n\033[91mStopping the route, the agent has crashed:")
+            print("> {}\033[0m\n".format(e))
+            traceback.print_exc()
+
+            crash_message = "Agent crashed"
+
+        except Exception as e:
+            print("\n\033[91mError during the simulation:")
+            print("> {}\033[0m\n".format(e))
+            traceback.print_exc()
+
+            crash_message = "Simulation crashed"
+            entry_status = "Crashed"
+
+        # Stop the scenario
+        try:
+            print("\033[1m> Stopping the route\033[0m")
+            self.manager.stop_scenario()
+            self._register_statistics(config, args.checkpoint, entry_status, crash_message)
+
+            if args.record:
+                self.client.stop_recorder()
+
+            # Remove all actors
+            scenario.remove_all_actors()
+
+            self._cleanup()
+
+        except KeyboardInterrupt as e:
+            print("\n\033[91mUser interrupted execution:")
+            print("> {}\033[0m\n".format(e))
+            traceback.print_exc()
+
+            crash_message = "Cancelled by user"
+            
+        except Exception as e:
+            print("\n\033[91mFailed to stop the scenario, the statistics might be empty:")
+            print("> {}\033[0m\n".format(e))
+            traceback.print_exc()
+
+            crash_message = "Simulation crashed"
+
+        if crash_message == "Cancelled by user":
+            self._cleanup()
+            sys.exit(-1)
+
+
+    def _prepare_ego_vehicles_cosim(self, ego_vehicles, wait_for_ego_vehicles=False):
+        """
+        Spawn or update the ego vehicles
+        """
         # print("Number of ego vehicles: ", len(ego_vehicles))
         if not wait_for_ego_vehicles:
             for vehicle in ego_vehicles:
@@ -245,7 +463,7 @@ class DAggerRoutine(object):
         for i in range(5):
             self.synchronization.tick()
 
-    def _load_and_wait_for_world(self, args, town, ego_vehicles=None):
+    def _load_and_wait_for_world_cosim(self, args, town, ego_vehicles=None):
         """
         Load a new CARLA world and provide data to CarlaDataProvider
         """
@@ -301,9 +519,9 @@ class DAggerRoutine(object):
         self.sumo_simulation = SumoSimulation(cfg_file, 1/20, args.sumo_host,
                                      args.sumo_port, args.sumo_gui, 1)
         
-        
         self.synchronization = SimulationSynchronization(self.sumo_simulation, self.carla_simulation, "carla",
-                                                args.sync_vehicle_color, args.sync_vehicle_lights)
+                                            args.sync_vehicle_color, args.sync_vehicle_lights)
+        self.sumo_active = True
         
         self.synchronization.tick()
 
@@ -323,7 +541,7 @@ class DAggerRoutine(object):
         self.statistics_manager.save_record(current_stats_record, config.index, checkpoint)
         self.statistics_manager.save_entry_status(entry_status, False, checkpoint)
 
-    def _load_and_run_scenario(self, args, config, iteration:int, last_checkpoint:str, save=False):
+    def _load_and_run_scenario_cosim(self, args, config, iteration:int, last_checkpoint:str, save=False):
         """
         Load and run the scenario given by config.
 
@@ -396,8 +614,8 @@ class DAggerRoutine(object):
 
         # Load the world and the scenario
         try:
-            self._load_and_wait_for_world(args, config.town, config.ego_vehicles)
-            self._prepare_ego_vehicles(config.ego_vehicles, False)
+            self._load_and_wait_for_world_cosim(args, config.town, config.ego_vehicles)
+            self._prepare_ego_vehicles_cosim(config.ego_vehicles, False)
             self.agent_instance.synchronization = self.synchronization
 
             scenario = RouteScenario(world=self.world, config=config, debug_mode=args.debug)
@@ -477,7 +695,10 @@ class DAggerRoutine(object):
             scenario.remove_all_actors()
 
             self._cleanup()
-            self.synchronization.close()
+            # self.synchronization.close()
+            # self.synchronization.reset()
+            self.synchronization.sumo.close()
+            self.sumo_active = False
 
         except KeyboardInterrupt as e:
             print("\n\033[91mUser interrupted execution:")
@@ -517,7 +738,7 @@ class DAggerRoutine(object):
             config = self.route_indexer.next()
 
             # run
-            self._load_and_run_scenario(args, config, iteration, last_checkpoint, save=save)
+            self._load_and_run_scenario_cosim(args, config, iteration, last_checkpoint, save=save)
 
             self.route_indexer.save_state(args.checkpoint)
         else:
@@ -527,7 +748,7 @@ class DAggerRoutine(object):
                 config = self.route_indexer.next()
 
                 # run
-                self._load_and_run_scenario(args, config, iteration, last_checkpoint, save=save)
+                self._load_and_run_scenario_cosim(args, config, iteration, last_checkpoint, save=save)
 
                 self.route_indexer.save_state(args.checkpoint)
 
@@ -548,7 +769,7 @@ class DAggerRoutine(object):
             config = self.route_indexer.next()
 
             # run
-            self._load_and_run_scenario(args, config, save)
+            self._load_and_run_scenario_cosim(args, config, save)
 
             self.route_indexer.save_state(args.checkpoint)
 
@@ -607,7 +828,14 @@ class DAggerRoutine(object):
             pass
         
         trainer.max_epochs += args.max_epochs 
-        self.synchronization.reset()
+
+        if self.synchronization is not None:
+            # self.synchronization.reset()
+
+            if self.sumo_active:
+                self.synchronization.sumo.close()
+                self.sumo_active = False
+
         trainer.fit(self.policy)
         gc.collect()
         torch.cuda.empty_cache()
