@@ -7,7 +7,7 @@ export HAS_DISPLAY=0                                                # set to 0 i
 export DEBUG_CHALLENGE=0
 export TEACHER_CONFIG=checkpoints/8-17_desired_vel/epoch=17.ckpt  
 
-export EXPERIMENT_ID=train_iterations=30_epochs=2_batch=32 # --id=${EXPERIMENT_ID} 
+export EXPERIMENT_ID=8-20_train2_iterations=30_epochs=2_batch=32_sampleby=steer # --id=${EXPERIMENT_ID} 
 
 export PYTHONPATH=$PYTHONPATH:$CARLA_ROOT/PythonAPI/carla
 export PYTHONPATH=$PYTHONPATH:$CARLA_ROOT/PythonAPI/carla/dist/carla-0.9.10-py3.7-linux-x86_64.egg

@@ -408,7 +408,7 @@ class DAggerRoutine(object):
             traceback.print_exc()
 
             crash_message = "Cancelled by user"
-            
+
         except Exception as e:
             print("\n\033[91mFailed to stop the scenario, the statistics might be empty:")
             print("> {}\033[0m\n".format(e))
@@ -807,7 +807,7 @@ class DAggerRoutine(object):
                 logger=logger, checkpoint_callback=checkpoint_callback)
 
         trainer.fit(self.policy)
-        gc.collect()
+        # gc.collect()
         torch.cuda.empty_cache()
 
         for i in range(args.dagger_iterations): 
@@ -837,7 +837,7 @@ class DAggerRoutine(object):
                 self.sumo_active = False
 
         trainer.fit(self.policy)
-        gc.collect()
+        # gc.collect()
         torch.cuda.empty_cache()
 
     def test(self, args):
@@ -859,7 +859,7 @@ def main():
 
     # Model args.
     parser.add_argument('--heatmap_radius', type=int, default=5)
-    parser.add_argument('--sample_by', type=str, choices=['none', 'even', 'speed', 'steer'], default='even')
+    parser.add_argument('--sample_by', type=str, choices=['none', 'even', 'speed', 'steer'], default='steer')
     parser.add_argument('--command_coefficient', type=float, default=0.1)
     parser.add_argument('--reward_coefficient', type=float, default=0.1)
     parser.add_argument('--temperature', type=float, default=5.0)
